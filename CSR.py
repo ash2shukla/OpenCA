@@ -29,7 +29,7 @@ def createCSR(cert_name, password, subject_dict, _type=None):
 	req.sign(pvt_obj, "sha256")
 	return pvt_bytes, dump_certificate_request(FILETYPE_PEM, req)
 
-def signReqCA(CA_path,CA_name,CSR_path,password,_type=None):
+def signReqCA(CA_path,CSR_path,password,_type='usr'):
 	'''
 	Signs the CSR.
 
@@ -37,6 +37,11 @@ def signReqCA(CA_path,CA_name,CSR_path,password,_type=None):
 
 	* DIRECTORY IN CA PATH MUST BE THE ONE GENERATED USING OpenCA *
 	'''
+	engine = getDB(CA_path)
+	Session = sessionmaker(bind = engine)
+	session = Session()
+
+	CA_name = CA_path.split('/')[-1]
 
 	# load certifiate of the CA.
 	CAcert_bytes = open(CA_path+'/certs/'+CA_name+'.cert.pem','rb').read()
@@ -44,11 +49,14 @@ def signReqCA(CA_path,CA_name,CSR_path,password,_type=None):
 
 	# load privatekey of the CA.
 	CAkey_bytes = open(CA_path+'/private/'+CA_name+'.private.pem','rb').read()
-	CAkey = load_privatekey(FILETYPE_PEM, CAkey_bytes, passphrase=password)
+	CAkey = load_privatekey(FILETYPE_PEM, CAkey_bytes, passphrase=bytes(password,'utf-8'))
 
 	# load the CSR.
 	CSR_bytes = open(CSR_path,'rb').read()
 	CSR = load_certificate_request(FILETYPE_PEM, CSR_bytes)
+
+	if CAcert.get_subject().CN==CSR.get_subject().CN:
+		return 'CSR CN cant be same as CA CN.'
 
 	cert = X509()
 
@@ -63,10 +71,33 @@ def signReqCA(CA_path,CA_name,CSR_path,password,_type=None):
 	open(CA_path+'/serial','wb').write(bytes(str(int(serial)+1),'utf-8'))
 
 	cert.gmtime_adj_notBefore(0)
+
 	if _type == 'ca':
 		cert.gmtime_adj_notAfter(5*365*24*60*60)
-	else:
-		cert.gmtime_adj_notAfter(365*24*60*60)
+		cert.add_extensions([ X509Extension(b"basicConstraints", True,b"CA:TRUE, pathlen:0"),\
+						X509Extension(b"keyUsage", True,b"keyCertSign, cRLSign"),\
+						X509Extension(b"authorityKeyIdentifier", False, "keyid:always, issuer"),\
+						X509Extension(b"subjectKeyIdentifier", False, b"hash",subject=cert)])
+	elif _type == 'usr':
+		cert.gmtime_adj_notAfter(1*365*24*60*60)
+		cert.add_extensions([ X509Extension(b"basicConstraints",True,b"CA FALSE"),\
+						X509Extension(b"nsCertType",False,b"client, email"),\
+						X509Extension(b"nsComment",False, b"Certified Using OpenSSL based OpenCA"),\
+						X509Extension(b"subjectKeyIdentifier",False,b"hash"),\
+						X509Extension(b"authorityKeyIdentifier",False, b"keyid,issuer"),\
+						X509Extension(b"keyUsage",True,b"nonRepudiation, digitalSignature, keyEncipherment"),\
+						X509Extension(b"extendedKeyUsage", False, b"clientAuth, emailProtection")])
+
+	elif _type == 'svr':
+		cert.gmtime_adj_notAfter(2*365*24*60*30)
+		cert.add_extensions([ X509Extension(b"basicConstraints",True,b"CA FALSE"),\
+						X509Extension(b"nsCertType",False,b"server"),\
+						X509Extension(b"nsComment",False, b"Certified Using OpenSSL based OpenCA"),\
+						X509Extension(b"subjectKeyIdentifier",False,b"hash"),\
+						X509Extension(b"authorityKeyIdentifier",False, b"keyid,issuer"),\
+						X509Extension(b"keyUsage",True,b"nonRepudiation, digitalSignature, keyEncipherment"),\
+						X509Extension(b"extendedKeyUsage", False, b"serverAuth")])
+
 	cert.set_issuer(CAcert.get_subject())
 	cert.set_pubkey(CSR.get_pubkey())
 	cert.sign(CAkey, "sha256")
@@ -79,11 +110,7 @@ def signReqCA(CA_path,CA_name,CSR_path,password,_type=None):
 	cstring =b'/'.join(clist)
 	cstring = b'/'+cstring+b'/'
 
-	engine = getDB(CA_path)
-	Session = sessionmaker(bind = engine)
-	session = Session()
-
-	IndexObj = Index(expiration_date = cert.get_notAfter(), serial_number_in_hex = str(serial), cert_filename = str(serial)+'.cert.pem', cert_subject = cstring)
+	IndexObj = Index(expiration_date = cert.get_notAfter(), serial_number_in_hex = str(serial), cert_filename = serial.decode('utf-8')+'.cert.pem', cert_subject = cstring)
 	session.add(IndexObj)
 	session.commit()
 

@@ -12,7 +12,7 @@ from cryptography.hazmat.primitives.serialization import Encoding
 from cryptography.hazmat.primitives.serialization import PrivateFormat
 from cryptography.hazmat.primitives.serialization import BestAvailableEncryption
 
-def generatePrivate(cert_name, _size = 2048, password = b"DEFAULT"):
+def generatePrivate(cert_name,password, _size = 2048):
 	pk = PKey()
 	pk.generate_key(TYPE_RSA, _size)
 	pk_gen = pk.to_cryptography_key()
@@ -21,7 +21,6 @@ def generatePrivate(cert_name, _size = 2048, password = b"DEFAULT"):
 	_encryption = BestAvailableEncryption(password)
 	pvt = pk_gen.private_bytes(_PEM, _TraditionalOpenSSL, _encryption)
 	return pk,pvt
-
 
 def setSubject(subject, subject_dict):
 
@@ -57,20 +56,7 @@ def setSubject(subject, subject_dict):
 
 	return subject
 
-def create_self_certificate(pk=None,_type = None,expiry = 10*365*24*60*60,subject_dict = {'C':'IN','ST':'Open-State','L':'Open-Locality',\
-										'O':'Open-CA','OU':'Open-Unit','CN':'OpenCA.open.ca'}):
-	'''
-	C - Country
-	ST - State or Province
-	L - Locality
-	O - Organization
-	OU - Organizational Unit
-	CN - Common Name
-	(-----------------------------IMPORTANT------------------------)
-	Common Names should never be same of any certificate under a CA.
-	(--------------------------------------------------------------)
-	'''
-
+def create_self_certificate(pk, subject_dict,expiry =10*365*24*60*60):
 	cert = X509()
 	subject = cert.get_subject()
 
@@ -82,8 +68,7 @@ def create_self_certificate(pk=None,_type = None,expiry = 10*365*24*60*60,subjec
 	cert.set_issuer(cert.get_subject())
 	cert.set_pubkey(pk)
 
-	if _type == "ca":
-		cert.add_extensions([ X509Extension(b"basicConstraints", True,b"CA:TRUE"),\
+	cert.add_extensions([ X509Extension(b"basicConstraints", True,b"CA:TRUE"),\
 						X509Extension(b"keyUsage", True,b"keyCertSign, cRLSign"),\
 						X509Extension(b"subjectKeyIdentifier", False, b"hash",subject=cert)])
 

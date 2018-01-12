@@ -3,7 +3,7 @@ from Signing import generatePrivate, create_self_certificate
 from CSR import createCSR, signReqCA
 from model import getDB
 
-def _create_root(root_name,password=b"DEFAULT"):
+def _create_root(root_name,subject_dict,password):
 	'''
 	This should be invoked on the ROOT CA.
 
@@ -26,7 +26,7 @@ def _create_root(root_name,password=b"DEFAULT"):
 	pvt_file.close()
 
 	# create the self signed certificate of the CA as it is ROOT
-	cert_bytes = create_self_certificate(pvt_obj,'ca')
+	cert_bytes = create_self_certificate(pvt_obj,subject_dict)
 
 	# write the certificate in the certs folder
 	cert_file = open(root_name+'/certs/'+root_name+".cert.pem",'wb')
@@ -48,7 +48,7 @@ def _create_root(root_name,password=b"DEFAULT"):
 
 	# other commands should be run from the same directory in future
 
-def _create_intermediate(intermediate_name, CN=None, password=b"DEFAULT",subject_dict = {'C':'IN'}):
+def _create_intermediate(intermediate_name, subject_dict,password):
 	'''
 	creates a CSR.
 
@@ -66,10 +66,8 @@ def _create_intermediate(intermediate_name, CN=None, password=b"DEFAULT",subject
 	mkdir(intermediate_name+'/private')
 	mkdir(intermediate_name+'/csr')
 
-	# create the CSR
-	if CN == None:
-		CN = intermediate_name+'.ca.OpenCA'
-	pvt_bytes, req_bytes = createCSR(cert_name = intermediate_name, password = password, _type = 'ca', subject_dict = subject_dict)
+	# cerate the CSR
+	pvt_bytes, req_bytes = createCSR(intermediate_name,password, subject_dict, _type = 'ca')
 
 	# write the private key in the private key folder
 	pvt_file = open(intermediate_name+'/private/'+intermediate_name+".private.pem",'wb')
@@ -94,7 +92,7 @@ def _create_intermediate(intermediate_name, CN=None, password=b"DEFAULT",subject
 	# create the index DB
 	getDB(intermediate_name+'/')
 
-def createCA(ca_type,name,CN=None,password=b"DEFAULT"):
+def createCA(ca_type,name,password="DEFAULT",subject_dict={'C':'IN'}):
 	'''
 	ca_type can be 'root' or 'intermediate'
 
@@ -103,8 +101,31 @@ def createCA(ca_type,name,CN=None,password=b"DEFAULT"):
 	if ca_type is intermediate then ca directory will contain a csr that can be signed by root using signReqCA function
 
 	creates a CA with the given name and password is set for the private key of CA.
+
+	subject_dict should have these values-
+
+		C - Country
+		ST - State or Province
+		L - Locality
+		O - Organization
+		OU - Organizational Unit
+		CN - Common Name
+		(-----------------------------IMPORTANT------------------------)
+		Common Names should never be same of any certificate under a CA.
+		(--------------------------------------------------------------)
+
+		e.g.
+		{'C':'IN','ST':'Open-State','L':'Open-Locality','O':'Open-CA','OU':'Open-Unit','CN':'OpenCA.open.ca'}
 	'''
+
+	if len(password) <4:
+		return 'PASSWORD MIN LENGTH 4'
+	password = bytes(password,'utf-8')
+
+	if 'CN' not in subject_dict.keys():
+		return 'Please Specify a FQDN e.g. {"CN":"root.OpenCA.lel"} (Should not be same as the parent)'
+
 	if ca_type == 'root':
-		_create_root(name,password)
-	elif ca_type == 'intermediate':
-		_create_intermediate(name,CN,password)
+		_create_root(name,subject_dict,password)
+	elif ca_type == 'int':
+		_create_intermediate(name,subject_dict,password)
