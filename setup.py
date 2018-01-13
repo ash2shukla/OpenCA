@@ -2,7 +2,7 @@ from setuptools import setup
 setup(
   name = 'OpenCA',
   packages = ['OpenCA'], # this must be the same as the name above
-  version = '0.1.0',
+  version = '0.1.1',
   description = 'A library to easily manage Certification Authorities based on OpenSSL',
   license='MIT',
   author = 'Ashish Shukla',

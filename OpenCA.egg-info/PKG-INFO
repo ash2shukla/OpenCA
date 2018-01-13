@@ -1,6 +1,6 @@
 Metadata-Version: 1.0
 Name: OpenCA
-Version: 0.1.0
+Version: 0.1.1
 Summary: A library to easily manage Certification Authorities based on OpenSSL
 Home-page: https://github.com/ash2shukla/OpenCA
 Author: Ashish Shukla
