@@ -1,7 +1,8 @@
 from os import mkdir
-from Signing import generatePrivate, create_self_certificate
-from CSR import createCSR, signReqCA
-from model import getDB
+from .Signing import generatePrivate, create_self_certificate
+from .CSR import createCSR, signReqCA
+from .model import getDB
+from .CAExceptions import PasswordException, SubjectException
 
 def _create_root(root_name,subject_dict,password):
 	'''
@@ -67,7 +68,7 @@ def _create_intermediate(intermediate_name, subject_dict,password):
 	mkdir(intermediate_name+'/csr')
 
 	# cerate the CSR
-	pvt_bytes, req_bytes = createCSR(intermediate_name,password, subject_dict, _type = 'ca')
+	pvt_bytes, req_bytes = createCSR(intermediate_name,password, subject_dict, csr_type = 'ca')
 
 	# write the private key in the private key folder
 	pvt_file = open(intermediate_name+'/private/'+intermediate_name+".private.pem",'wb')
@@ -119,11 +120,12 @@ def createCA(ca_type,name,password="DEFAULT",subject_dict={'C':'IN'}):
 	'''
 
 	if len(password) <4:
-		return 'PASSWORD MIN LENGTH 4'
+		raise PasswordException('Password should be at least 4 character long')
+
 	password = bytes(password,'utf-8')
 
 	if 'CN' not in subject_dict.keys():
-		return 'Please Specify a FQDN e.g. {"CN":"root.OpenCA.lel"} (Should not be same as the parent)'
+		raise SubjectException('Please Specify a FQDN e.g. {"CN":"root.OpenCA.lel"} (Should not be same as the parent)')
 
 	if ca_type == 'root':
 		_create_root(name,subject_dict,password)

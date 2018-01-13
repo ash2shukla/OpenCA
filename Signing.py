@@ -5,7 +5,7 @@ from OpenSSL.crypto import dump_certificate, dump_certificate_request
 from OpenSSL.crypto import load_certificate, load_privatekey
 from OpenSSL.crypto import FILETYPE_PEM
 
-from model import getDB, Index
+from .model import getDB, Index
 
 from cryptography.hazmat.primitives.asymmetric.rsa import RSAPrivateKeyWithSerialization
 from cryptography.hazmat.primitives.serialization import Encoding
