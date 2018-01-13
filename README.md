@@ -1,6 +1,36 @@
 # OpenCA
 A tool based on pyOpenSSL to easily create and manage Certification Authorities.
 
+Install - pip3 install OpenCA
+
+	from OpenCA import createCA, signReqCA, createCSR
+	createCA('root','ROOT','root-pass',{'CN':'FQDN_ROOT'})
+	createCA('int','INTERMEDIATE','inter-pass',{'CN':'FQDN_INETRMEDIATE'})
+
+	signReqCA('ROOT','INTERMEDIATE','root-pass','ca')
+
+	createCSR('USER','user-pass',{'CN':'FQDN_USER'})
+	createCSR('SERVER','server-pass',{'CN':'FQDN_SERVER'})
+
+	signReqCA('INTERMEDIATE','USER.csr.pem','inter-pass','usr')
+	signReqCA('INTERMEDIATE','SERVER.csr.pem','inter-pass','svr')
+
+	from OpenCA import Utils
+	Utils.verify_chain('ROOT/certs/ROOT.cert.pem',open('INTERMEDIATE/certs/INTERMEDIATE.cert.pem','rb').read()) # True
+
+	Utils.verify_chain('ROOT/certs/ROOT.cert.pem',open('USER.cert.pem','rb').read()) # False
+	Utils.verify_chain('ROOT/certs/ROOT.cert.pem',open('SERVER.cert.pem','rb').read()) # False
+	Utils.verify_chain('INTERMEDIATE/certs/INTERMEDIATE.cert.pem',open('USER.cert.pem','rb').read()) # False
+	Utils.verify_chain('INTERMEDIATE/certs/INTERMEDIATE.cert.pem',open('SERVER.cert.pem','rb').read()) # False
+
+	# End Certificates can only be verified using the chain of trust
+
+	Utils.verify_chain('INTERMEDIATE/certs/ROOT.INTERMEDIATE.chain.pem',open('USER.cert.pem','rb').read()) # True
+	Utils.verify_chain('INTERMEDIATE/certs/ROOT.INTERMEDIATE.chain.pem',open('SERVER.cert.pem','rb').read()) # True
+
+
+
+
 create ROOT CA -
 
 	from OpenCA import createCA

@@ -149,7 +149,7 @@ def signReqCA(CA_path,CSR_path,password,csr_type='usr'):
 		open(path.join(path.abspath(SUBCA_dir),'certs',(CA_name+'.'+SUBCA_name+'.chain.pem')),'wb').write(cert_bytes+CAcert_bytes)
 		return (cert_bytes+CAcert_bytes), cert_bytes
 	else:
-		print(path.join(path.abspath(path.split(CSR_path)[0]),'USER.cert.pem'))
+		print('Certificate Produced @ ',path.join(path.abspath(path.split(CSR_path)[0]),'USER.cert.pem'))
 		if csr_type == 'usr':
 			open(path.join(path.abspath(path.split(CSR_path)[0]),'USER.cert.pem'),'wb').write(cert_bytes)
 		elif csr_type == 'svr':
