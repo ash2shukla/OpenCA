@@ -4,18 +4,28 @@ from sqlalchemy.orm import sessionmaker
 from .model import Index
 from sqlalchemy import create_engine
 
-def verify_chain(chain_path, cert_bytes):
+def verify_chain(chain_path, cert_bytes_or_path):
+	try:
+		# If certificate bytes are passed load the certificate
+		cert = load_certificate(FILETYPE_PEM,cert_bytes_or_path)
+	except:
+		# If certificate path is passed open the certificate and load it's bytes
+		cert = load_certificate(FILETYPE_PEM, open(cert_bytes_or_path,'rb').read())
+
 	chain_bytes = open(chain_path,'rb').read()
 	parts = chain_bytes.split(b'-----\n-----')
-	cert_list = []
-	store = X509Store()
-	for i in range(len(parts)):
-		if i%2 ==0:
-			store.add_cert(load_certificate(FILETYPE_PEM,(parts[i]+b'-----\n')))
-		else:
-			store.add_cert(load_certificate(FILETYPE_PEM,(b'-----'+parts[i])))
+	n_certs = len(parts)
 
-	cert = load_certificate(FILETYPE_PEM, cert_bytes)
+	store = X509Store()
+	if n_certs == 1:
+		store.add_cert(load_certificate(FILETYPE_PEM,parts[0]))
+	else:
+		cert_list = []
+		store.add_cert(load_certificate(FILETYPE_PEM,(parts[0]+b'-----\n')))
+		store.add_cert(load_certificate(FILETYPE_PEM,(b'-----'+parts[1])))
+		for i in parts)[1:-1]:
+			store.add_cert(load_certificate(FILETYPE_PEM,(b'-----'+i+b'-----\n')))
+
 	store_ctx = X509StoreContext(store, cert)
 	try:
 		if store_ctx.verify_certificate() == None:
