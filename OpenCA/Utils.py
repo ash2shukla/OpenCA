@@ -22,8 +22,8 @@ def verify_chain(chain_path, cert_bytes_or_path):
 	else:
 		cert_list = []
 		store.add_cert(load_certificate(FILETYPE_PEM,(parts[0]+b'-----\n')))
-		store.add_cert(load_certificate(FILETYPE_PEM,(b'-----'+parts[1])))
-		for i in parts)[1:-1]:
+		store.add_cert(load_certificate(FILETYPE_PEM,(b'-----'+parts[-1])))
+		for i in parts[1:-1]:
 			store.add_cert(load_certificate(FILETYPE_PEM,(b'-----'+i+b'-----\n')))
 
 	store_ctx = X509StoreContext(store, cert)

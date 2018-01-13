@@ -145,8 +145,12 @@ def signReqCA(CA_path,CSR_path,password,csr_type='usr'):
 
 	if csr_type == 'ca':
 		# If csr_type is 'ca' then save the chain of trust and it's certificate
+		if path.exists(path.join(path.abspath(CA_path),'certs',(CA_name+'.chain.pem'))):
+			# If CA has a chain then forward that chain further
+			CAcert_bytes =  open(path.join(path.abspath(CA_path),'certs',(CA_name+'.chain.pem')),'rb').read()
+
 		open(path.join(path.abspath(SUBCA_dir),'certs',(SUBCA_name+'.cert.pem')),'wb').write(cert_bytes)
-		open(path.join(path.abspath(SUBCA_dir),'certs',(CA_name+'.'+SUBCA_name+'.chain.pem')),'wb').write(cert_bytes+CAcert_bytes)
+		open(path.join(path.abspath(SUBCA_dir),'certs',(SUBCA_name+'.chain.pem')),'wb').write(cert_bytes+CAcert_bytes)
 		return (cert_bytes+CAcert_bytes), cert_bytes
 	else:
 		print('Certificate Produced @ ',path.join(path.abspath(path.split(CSR_path)[0]),'USER.cert.pem'))
