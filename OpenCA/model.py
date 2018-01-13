@@ -2,6 +2,7 @@ from sqlalchemy import Column, String, Integer
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 from sqlalchemy import create_engine
+from os import path
 
 Base = declarative_base()
 
@@ -17,6 +18,6 @@ class Index(Base):
 	cert_subject = Column(String(500))
 
 def getDB(_path):
-	engine = create_engine('sqlite:///'+_path+'/index.db')
+	engine = create_engine('sqlite:///'+path.join(path.abspath(_path),'index.db'))
 	Base.metadata.create_all(engine)
 	return engine

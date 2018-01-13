@@ -10,6 +10,8 @@ from .model import getDB
 from .Utils import is_serial_consistent
 from .CAExceptions import SerialException, CNException
 
+from os import path
+
 def createCSR(cert_name, password, subject_dict, csr_type='usr'):
 	'''
 	create A Certificate Signing Request for a CA.
@@ -18,6 +20,9 @@ def createCSR(cert_name, password, subject_dict, csr_type='usr'):
 
 	CN MUST be passed.
 	'''
+	if isinstance(password,str):
+		password = bytes(password, 'utf-8')
+
 	if csr_type == 'ca':
 		pvt_obj,pvt_bytes = generatePrivate(cert_name,_size= 4096, password = password)
 	else :
@@ -31,14 +36,16 @@ def createCSR(cert_name, password, subject_dict, csr_type='usr'):
 	req.sign(pvt_obj, "sha256")
 	if csr_type == 'usr':
 		# If it is a request by user then also create the files in the pwd
-		open(cert_name+'.private.pem','wb').write(pvt_bytes)
-		open(cert_name+'.csr.pem','wb').write(dump_certificate_request(FILETYPE_PEM, req))
+		open(path.abspath(cert_name+'.private.pem'),'wb').write(pvt_bytes)
+		open(path.abspath(cert_name+'.csr.pem'),'wb').write(dump_certificate_request(FILETYPE_PEM, req))
 
 	return pvt_bytes, dump_certificate_request(FILETYPE_PEM, req)
 
 def signReqCA(CA_path,CSR_path,password,csr_type='usr'):
 	'''
 	Signs the CSR.
+	Returns bytes of (Chain of trust, Issued Certificate) if csr_type == 'ca'
+	Returns bytes of (Issued Certificate) if csr_type == 'usr' or 'svr'
 
 	CA_path : path of the directory of CA which will sign the request.
 
@@ -51,21 +58,23 @@ def signReqCA(CA_path,CSR_path,password,csr_type='usr'):
 	Session = sessionmaker(bind = engine)
 	session = Session()
 
-	CA_name = CA_path.split('/')[-1]
+	CA_name = path.split(CA_path)[1]
 
-	# load certifiate of the CA.
-	CAcert_bytes = open(CA_path+'/certs/'+CA_name+'.cert.pem','rb').read()
+	# load certifiate of the CA
+	CAcert_bytes = open(path.join(path.abspath(CA_path),'certs',(CA_name+'.cert.pem')),'rb').read()
 	CAcert = load_certificate(FILETYPE_PEM, CAcert_bytes)
 
+	password = bytes(password,'utf-8') if isinstance(password,str) else password
+
 	# load privatekey of the CA.
-	CAkey_bytes = open(CA_path+'/private/'+CA_name+'.private.pem','rb').read()
-	CAkey = load_privatekey(FILETYPE_PEM, CAkey_bytes, passphrase=bytes(password,'utf-8'))
+	CAkey_bytes = open(path.join(path.abspath(CA_path),'private',(CA_name+'.private.pem')),'rb').read()
+	CAkey = load_privatekey(FILETYPE_PEM, CAkey_bytes, passphrase= password)
 
 	# determine if the request is for a CA
 	if csr_type == 'ca':
-		SUBCA_name = CSR_path.split('/')[-1]
+		SUBCA_name = path.split(CSR_path)[1]
 		SUBCA_dir = CSR_path[:]
-		CSR_path = CSR_path+'/csr/'+SUBCA_name+'.csr.pem'
+		CSR_path = path.join(path.abspath(CSR_path),'csr',(SUBCA_name+'.csr.pem'))
 
 	# load the CSR.
 	CSR_bytes = open(CSR_path,'rb').read()
@@ -81,10 +90,10 @@ def signReqCA(CA_path,CSR_path,password,csr_type='usr'):
 	# Get the last serial number and dump it in serial.old
 	# Increment the serial number and save it in serial
 	# give the incremented serial number here
-	serial = open(CA_path+'/serial','rb').read()
+	serial = open(path.join(CA_path,'serial'),'rb').read()
 	cert.set_serial_number(int(serial))
-	open(CA_path+'/serial.old','wb').write(serial)
-	open(CA_path+'/serial','wb').write(bytes(str(int(serial)+1),'utf-8'))
+	open(path.join(CA_path,'serial.old'),'wb').write(serial)
+	open(path.join(CA_path,'serial'),'wb').write(bytes(str(int(serial)+1),'utf-8'))
 
 	cert.gmtime_adj_notBefore(0)
 
@@ -132,12 +141,17 @@ def signReqCA(CA_path,CSR_path,password,csr_type='usr'):
 
 	# save the certificates in newcerts directory of the CA
 	cert_bytes =  dump_certificate(FILETYPE_PEM, cert)
-	open(CA_path+'/newcerts/'+serial.decode('utf-8')+'.cert.pem','wb').write(cert_bytes)
+	open(path.join(path.abspath(CA_path),'newcerts',(serial.decode('utf-8')+'.cert.pem')),'wb').write(cert_bytes)
 
 	if csr_type == 'ca':
 		# If csr_type is 'ca' then save the chain of trust and it's certificate
-		open(SUBCA_dir+'/certs/'+SUBCA_name+'.cert.pem','wb').write(cert_bytes)
-		open(SUBCA_dir+'/certs/'+CA_name+'.'+SUBCA_name+'.chain.pem','wb').write(cert_bytes+CAcert_bytes)
+		open(path.join(path.abspath(SUBCA_dir),'certs',(SUBCA_name+'.cert.pem')),'wb').write(cert_bytes)
+		open(path.join(path.abspath(SUBCA_dir),'certs',(CA_name+'.'+SUBCA_name+'.chain.pem')),'wb').write(cert_bytes+CAcert_bytes)
 		return (cert_bytes+CAcert_bytes), cert_bytes
 	else:
+		print(path.join(path.abspath(path.split(CSR_path)[0]),'USER.cert.pem'))
+		if csr_type == 'usr':
+			open(path.join(path.abspath(path.split(CSR_path)[0]),'USER.cert.pem'),'wb').write(cert_bytes)
+		elif csr_type == 'svr':
+			open(path.join(path.abspath(path.split(CSR_path)[0]),'SERVER.cert.pem'),'wb').write(cert_bytes)
 		return cert_bytes

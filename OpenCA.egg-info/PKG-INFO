@@ -1,0 +1,12 @@
+Metadata-Version: 1.0
+Name: OpenCA
+Version: 0.1.0
+Summary: A library to easily manage Certification Authorities based on OpenSSL
+Home-page: https://github.com/ash2shukla/OpenCA
+Author: Ashish Shukla
+Author-email: ash2shukla@gmail.com
+License: MIT
+Description-Content-Type: UNKNOWN
+Description: UNKNOWN
+Keywords: CA,pyOpenSSL,OpenSSL
+Platform: UNKNOWN
