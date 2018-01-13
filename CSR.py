@@ -8,11 +8,11 @@ from sqlalchemy.orm import sessionmaker
 from Signing import generatePrivate,setSubject
 from model import getDB
 
-def createCSR(cert_name, password, subject_dict, _type=None):
+def createCSR(cert_name, password, subject_dict, csr_type=None):
 	'''
 	create A Certificate Signing Request for a CA.
 
-	_type should be set to 'ca' if it is a CSR for an intermediate CA.
+	csr_type should be set to 'ca' if it is a CSR for an intermediate CA.
 
 	CN MUST be passed.
 	'''
@@ -72,13 +72,13 @@ def signReqCA(CA_path,CSR_path,password,_type='usr'):
 
 	cert.gmtime_adj_notBefore(0)
 
-	if _type == 'ca':
+	if csr_type == 'ca':
 		cert.gmtime_adj_notAfter(5*365*24*60*60)
 		cert.add_extensions([ X509Extension(b"basicConstraints", True,b"CA:TRUE, pathlen:0"),\
 						X509Extension(b"keyUsage", True,b"keyCertSign, cRLSign"),\
 						X509Extension(b"authorityKeyIdentifier", False, "keyid:always, issuer"),\
 						X509Extension(b"subjectKeyIdentifier", False, b"hash",subject=cert)])
-	elif _type == 'usr':
+	elif csr_type == 'usr':
 		cert.gmtime_adj_notAfter(1*365*24*60*60)
 		cert.add_extensions([ X509Extension(b"basicConstraints",True,b"CA FALSE"),\
 						X509Extension(b"nsCertType",False,b"client, email"),\
@@ -88,7 +88,7 @@ def signReqCA(CA_path,CSR_path,password,_type='usr'):
 						X509Extension(b"keyUsage",True,b"nonRepudiation, digitalSignature, keyEncipherment"),\
 						X509Extension(b"extendedKeyUsage", False, b"clientAuth, emailProtection")])
 
-	elif _type == 'svr':
+	elif csr_type == 'svr':
 		cert.gmtime_adj_notAfter(2*365*24*60*30)
 		cert.add_extensions([ X509Extension(b"basicConstraints",True,b"CA FALSE"),\
 						X509Extension(b"nsCertType",False,b"server"),\
